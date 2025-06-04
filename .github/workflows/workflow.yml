@@ -26,8 +26,8 @@ jobs:
 
       - name: Run tests
         run: |
-          python Habit_tracker/manage.py test habits.tests
-          python Habit_tracker/manage.py test users.tests
+          python habit_tracker/manage.py test habits.tests
+          python habit_tracker/manage.py test users.tests
 
   build-and-deploy:
     needs: test
