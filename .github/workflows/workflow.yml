@@ -1,4 +1,5 @@
 name: CI/CD Pipeline
+
 on:
   push:
     branches:
@@ -10,12 +11,35 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 123456
+          POSTGRES_DB: habit_tracker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:5
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # Обновляем до v4 для большей стабильности
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5  # Обновляем до v5
         with:
           python-version: '3.12'
 
@@ -24,25 +48,40 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Run linters
         run: |
-          python habit_tracker/manage.py test habits.tests
-          python habit_tracker/manage.py test users.tests
+          pip install flake8
+          flake8 .
+
+      - name: Run tests
+        env:
+          DB_ENGINE: django.db.backends.postgresql
+          DB_NAME: habit_tracker
+          DB_USER: postgres
+          DB_PASSWORD: 123456
+          DB_HOST: localhost
+          DB_PORT: 5432
+          SECRET_KEY: your-very-secure-secret-key-1234567890
+          TELEGRAM_BOT_TOKEN: 6557371718:AAETC6T-PobT4JXYv0OHM8G40l1BhMp1g
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+        run: |
+          python manage.py test habits.tests
+          python manage.py test users.tests
 
   build-and-deploy:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -50,13 +89,13 @@ jobs:
       - name: Build and push Docker images
         run: |
           docker-compose -f docker-compose.yml build
-          docker tag habit_tracker-web:latest rilzsnep/habit_tracker-web:latest
-          docker tag habit_tracker-celery:latest rilzsnep/habit_tracker-celery:latest
+          docker tag habit_tracker_web:latest rilzsnep/habit_tracker-web:latest
+          docker tag habit_tracker_celery:latest rilzsnep/habit_tracker-celery:latest
           docker push rilzsnep/habit_tracker-web:latest
           docker push rilzsnep/habit_tracker-celery:latest
 
       - name: Deploy to server
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
