@@ -1,0 +1,80 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: habit_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:5
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=habit_tracker
+      - DB_USER=postgres
+      - DB_PASSWORD=123456
+      - DB_HOST=db
+      - DB_PORT=5432
+      - SECRET_KEY=your-very-secure-secret-key-1234567890
+      - TELEGRAM_BOT_TOKEN=6557371718:AAETC6T-PobT4JXYv0OHM8G40l1BhMp1g
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - 8000
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A habit_tracker worker -l info
+    environment:
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=habit_tracker
+      - DB_USER=postgres
+      - DB_PASSWORD=123456
+      - DB_HOST=db
+      - DB_PORT=5432
+      - SECRET_KEY=your-very-secure-secret-key-1234567890
+      - TELEGRAM_BOT_TOKEN=6557371718:AAETC6T-PobT4JXYv0OHM8G40l1BhMp1g
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - web
+
+volumes:
+  postgres_data:
+  redis_data:

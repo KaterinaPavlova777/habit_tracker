@@ -1,0 +1,75 @@
+name: CI/CD Pipeline
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run linting with flake8
+        run: |
+          pip install flake8
+          flake8 . --max-line-length=120 --exclude=venv,.git,__pycache__
+
+      - name: Run tests
+        run: |
+          python Habit_tracker/manage.py test habits.tests
+          python Habit_tracker/manage.py test users.tests
+
+  build-and-deploy:
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker images
+        run: |
+          docker-compose -f docker-compose.yml build
+          docker tag habit_tracker-web:latest rilzsnep/habit_tracker-web:latest
+          docker tag habit_tracker-celery:latest rilzsnep/habit_tracker-celery:latest
+          docker push rilzsnep/habit_tracker-web:latest
+          docker push rilzsnep/habit_tracker-celery:latest
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            cd /home/rilzsnep/habit_tracker
+            git pull origin develop
+            docker-compose -f docker-compose.yml down
+            docker-compose -f docker-compose.yml pull
+            docker-compose -f docker-compose.yml up -d
