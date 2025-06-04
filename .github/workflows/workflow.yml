@@ -30,7 +30,7 @@ jobs:
           python Habit_tracker/manage.py test users.tests
 
   build-and-deploy:
-    needs: test-and-lint
+    needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
 
