@@ -15,5 +15,5 @@ urlpatterns = [
 
     path('register/', UserRegistration.as_view(), name='register'),
     path('users/', include('users.urls')),
-    path('app/', include('app.urls'))
+    path('habits/', include('habits.urls'))
 ]
