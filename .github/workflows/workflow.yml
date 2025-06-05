@@ -100,10 +100,10 @@ jobs:
       - name: Build and push Docker images
         run: |
           docker-compose -f docker-compose.yml build
-          docker tag habit_tracker_web:latest rilzsnep/habit_tracker-web:latest
-          docker tag habit_tracker_celery:latest rilzsnep/habit_tracker-celery:latest
-          docker push rilzsnep/habit_tracker-web:latest
-          docker push rilzsnep/habit_tracker-celery:latest
+          echo "docker tag habit_tracker_web:latest doomuy/habit_tracker-web:latest
+          docker tag habit_tracker_celery:latest doomuy/habit_tracker-celery:latest
+          docker push doomuy/habit_tracker-web:latest
+          docker push doomuy/habit_tracker-celery:latest"
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
