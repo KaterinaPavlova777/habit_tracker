@@ -13,5 +13,4 @@ urlpatterns = [
     path('update/<int:pk>', HabitUpdate.as_view(), name='habit-update'),
     path('detail/<int:pk>', HabitDetail.as_view(), name='habit-detail'),
     path('delete/<int:pk>', HabitDestroy.as_view(), name='habit-delete'),
-    path('app/', include('app.urls')),  # Check if 'app.urls' includes the root or itself
 ]
