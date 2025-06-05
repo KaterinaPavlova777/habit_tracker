@@ -105,11 +105,11 @@ jobs:
 
       - name: Build and push Docker images
         run: |
-          docker-compose -f docker-compose.yml build
-          echo "docker tag habit_tracker_web:latest doomuy/habit_tracker-web:latest
-          docker tag habit_tracker_celery:latest doomuy/habit_tracker-celery:latest
-          docker push doomuy/habit_tracker-web:latest
-          docker push doomuy/habit_tracker-celery:latest"
+          echo "docker-compose -f docker-compose.yml build"
+          echo "echo "docker tag habit_tracker_web:latest doomuy/habit_tracker-web:latest"
+          echo "docker tag habit_tracker_celery:latest doomuy/habit_tracker-celery:latest"
+          echo "docker push doomuy/habit_tracker-web:latest"
+          echo "docker push doomuy/habit_tracker-celery:latest"
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
@@ -119,7 +119,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
-            cd /home/rilzsnep/habit_tracker
-            docker-compose -f docker-compose.yml down
-            docker-compose -f docker-compose.yml pull
-            docker-compose -f docker-compose.yml up -d
+            echo "cd /home/rilzsnep/habit_tracker"
+            echo "docker-compose -f docker-compose.yml down"
+            echo "docker-compose -f docker-compose.yml pull"
+            echo "docker-compose -f docker-compose.yml up -d"
