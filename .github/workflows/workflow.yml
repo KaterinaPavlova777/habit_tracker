@@ -109,7 +109,6 @@ jobs:
           echo "echo "docker tag habit_tracker_web:latest doomuy/habit_tracker-web:latest"
           echo "docker tag habit_tracker_celery:latest doomuy/habit_tracker-celery:latest"
           echo "docker push doomuy/habit_tracker-web:latest"
-          echo "docker push doomuy/habit_tracker-celery:latest"
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
