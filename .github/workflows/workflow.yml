@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:13
+        image: postgres:15  # Обновляем до более новой версии
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: 123456
@@ -26,7 +26,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis:5
+        image: redis:7  # Обновляем до redis:7
         ports:
           - 6379:6379
         options: >-
@@ -36,17 +36,39 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4  # Обновляем до v4 для большей стабильности
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5  # Обновляем до v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Run migrations
+        env:
+          DB_ENGINE: django.db.backends.postgresql
+          DB_NAME: habit_tracker
+          DB_USER: postgres
+          DB_PASSWORD: 123456
+          DB_HOST: localhost
+          DB_PORT: 5432
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+        run: python manage.py migrate
 
       - name: Run tests
         env:
@@ -56,13 +78,11 @@ jobs:
           DB_PASSWORD: 123456
           DB_HOST: localhost
           DB_PORT: 5432
-          SECRET_KEY: your-very-secure-secret-key-1234567890
-          TELEGRAM_BOT_TOKEN: 6557371718:AAETC6T-PobT4JXYv0OHM8G40l1BhMp1g
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CELERY_BROKER_URL: redis://localhost:6379/0
           CELERY_RESULT_BACKEND: redis://localhost:6379/0
-        run: |
-          python manage.py test habits.tests
-          python manage.py test users.tests
+        run: python manage.py test
 
   build-and-deploy:
     needs: test
@@ -98,7 +118,6 @@ jobs:
           port: 22
           script: |
             cd /home/rilzsnep/habit_tracker
-            git pull origin develop
             docker-compose -f docker-compose.yml down
             docker-compose -f docker-compose.yml pull
             docker-compose -f docker-compose.yml up -d
