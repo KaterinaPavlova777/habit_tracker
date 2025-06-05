@@ -78,17 +78,6 @@ jobs:
         run: echo "python manage.py migrate"
 
       - name: Run tests
-        env:
-          DB_ENGINE: django.db.backends.postgresql
-          DB_NAME: habit_tracker
-          DB_USER: postgres
-          DB_PASSWORD: 123456
-          DB_HOST: localhost
-          DB_PORT: 5432
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CELERY_BROKER_URL: redis://localhost:6379/0
-          CELERY_RESULT_BACKEND: redis://localhost:6379/0
         run: python manage.py test habits.tests users.tests
 
   build-and-deploy:
