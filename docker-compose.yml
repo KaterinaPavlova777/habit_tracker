@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: habit_tracker
+      POSTGRES_USER: habit_user
+      POSTGRES_PASSWORD: your_secure_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    command: gunicorn habit_tracker.config.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://habit_user:your_secure_password@db:5432/habit_tracker
+
+  celery:
+    build: .
+    command: celery -A habit_tracker.config worker -l info
+    volumes:
+      - .:/code
+    depends_on:
+      - db
+      - rabbitmq
+
+  celery-beat:
+    build: .
+    command: celery -A habit_tracker.config beat -l info
+    volumes:
+      - .:/code
+    depends_on:
+      - db
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3.9
+    ports:
+      - "5672:5672"
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    volumes:
+      - .:/code
+    depends_on:
+      - web
+
+volumes:
+  postgres_data:
