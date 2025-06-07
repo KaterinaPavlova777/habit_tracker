@@ -1,4 +1,4 @@
-# nginx/Dockerfile
-FROM nginx:alpine
+FROM nginx:latest
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN mkdir -p /app/static
