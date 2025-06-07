@@ -9,51 +9,32 @@ services:
       POSTGRES_PASSWORD: 123456
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   redis:
     image: redis:5
     volumes:
       - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   web:
     build: .
     command: bash -c "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 --workers 3 config.wsgi"
     environment:
-      - DATABASE_URL=postgres://postgres:123456@db:5432/habit_tracker
+      - DJANGO_SETTINGS_MODULE=config.settings
       - CELERY_BROKER_URL=redis://redis:6379/0
-    volumes:
-      - .:/app
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    expose:
-      - "8000"
+      - db
+      - redis
 
   celery:
     build: .
     command: celery -A config.celery worker --loglevel=info
     environment:
-      - DATABASE_URL=postgres://postgres:123456@db:5432/habit_tracker
+      - DJANGO_SETTINGS_MODULE=config.settings
       - CELERY_BROKER_URL=redis://redis:6379/0
-    volumes:
-      - .:/app
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - db
+      - redis
+      - web
 
   nginx:
     image: nginx:latest
