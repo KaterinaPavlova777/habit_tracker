@@ -2,41 +2,57 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:17
+    image: postgres:14
     environment:
       POSTGRES_DB: habit_tracker
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_USER: habit_user
+      POSTGRES_PASSWORD: your_secure_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  redis:
-    image: redis:7
-    volumes:
-      - redis_data:/data
-
   web:
     build: .
-    command: bash -c "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 --workers 3 config.wsgi"
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings
+    command: gunicorn habit_tracker.config.wsgi:application --bind 0.0.0.0:8000
     volumes:
-      - .:/app
+      - .:/code
+    ports:
+      - "8000:8000"
     depends_on:
       - db
-      - redis
+    environment:
+      - DATABASE_URL=postgres://habit_user:your_secure_password@db:5432/habit_tracker
 
   celery:
     build: .
-    command: celery -A config worker --loglevel=info
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings
+    command: celery -A habit_tracker.config worker -l info
     volumes:
-      - .:/app
+      - .:/code
     depends_on:
       - db
-      - redis
+      - rabbitmq
+
+  celery-beat:
+    build: .
+    command: celery -A habit_tracker.config beat -l info
+    volumes:
+      - .:/code
+    depends_on:
+      - db
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3.9
+    ports:
+      - "5672:5672"
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    volumes:
+      - .:/code
+    depends_on:
+      - web
 
 volumes:
   postgres_data:
-  redis_data:
