@@ -1,4 +1,4 @@
-from health_tracker.settings import TG_BOT_KEY
+from config.settings import TG_BOT_KEY
 import requests
 
 
